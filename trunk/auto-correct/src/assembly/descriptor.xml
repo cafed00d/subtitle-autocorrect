@@ -1,0 +1,41 @@
+<assembly 
+  xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0
+                      http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+  
+  <id>${project.build.finalName}</id>
+  <includeBaseDirectory>true</includeBaseDirectory>
+  <formats>
+    <format>dir</format>
+    <format>zip</format>
+  </formats>
+  <!-- Include the script files -->
+  <fileSets>
+    <fileSet>
+      <directory>${project.build.directory}/scripts</directory>
+      <outputDirectory>.</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+  </fileSets>
+  <dependencySets>
+    <!-- Include the created JAR file -->
+    <dependencySet>
+      <useProjectArtifact>true</useProjectArtifact>
+      <fileMode>0644</fileMode>
+      <includes>
+        <include>*:${project.artifactId}:*</include>
+      </includes>
+    </dependencySet>
+    <!-- Include the dependency JAR files -->
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <fileMode>0644</fileMode>
+      <outputDirectory>lib</outputDirectory>
+      <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+      <excludes>
+        <exclude>*:${project.artifactId}:*</exclude>
+      </excludes>
+    </dependencySet>
+  </dependencySets>
+</assembly>
