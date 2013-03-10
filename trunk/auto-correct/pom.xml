@@ -34,7 +34,7 @@
   <groupId>org.cafed00d.subtitle</groupId>
   <artifactId>auto-correct</artifactId>
   <packaging>jar</packaging>
-  <version>1.0</version>
+  <version>1.1</version>
 
   <!-- Artifact information -->
   <name>Movie Subtitle Auto-Corrector</name>
