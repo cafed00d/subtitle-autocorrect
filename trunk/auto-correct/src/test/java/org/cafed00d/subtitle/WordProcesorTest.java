@@ -27,7 +27,8 @@ public class WordProcesorTest {
   /**
    * The phrase that includes numerous OCR misspellings to use for testing.
    */
-  static final StringBuilder PHRASE = new StringBuilder("[SlNGlNG] lsn't it a IoveIy day to get caught in the rain. Well All");
+  static final StringBuilder PHRASE = new StringBuilder(
+      "[SlNGlNG] lsn't it a IoveIy day to get caught in the rain. NeaI's l'm l'II lt'II Well All Ioad lnitially This'II seIection Iast lf");
 
   /**
    * For this test case there is only a single character and it is correct.
@@ -50,13 +51,24 @@ public class WordProcesorTest {
   }
 
   /**
-   * For this test case the word contains upper case I's to correct.
+   * For this test case the word contains an upper case I's to correct.
    * <p>
    * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
    */
   @Test
   public void testProcess_upperI() {
-    testProcess("IoveIy", "Iovely", 4, 2, 0, 1, 0, true);
+    testProcess("seIection", "selection", 8, 1, 0, 1, 0, true);
+  }
+
+  /**
+   * For this test case the word contains an upper case I to correct and has an
+   * apostrophe.
+   * <p>
+   * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
+   */
+  @Test
+  public void testProcess_upperIwithAposthrophe() {
+    testProcess("NeaI's", "Neal's", 3, 2, 0, 1, 1, true);
   }
 
   /**
@@ -77,6 +89,90 @@ public class WordProcesorTest {
   @Test
   public void testProcess_dictionary() {
     testProcess("lsn't", "Isn't", 4, 0, 1, 0, 1, true);
+  }
+
+  /**
+   * For this test case the word starts with an I with the next letter being a
+   * vowel.
+   * <p>
+   * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
+   */
+  @Test
+  public void testProcess_initial_I() {
+    testProcess("Iast", "last", 3, 1, 0, 0, 0, true);
+  }
+
+  /**
+   * For this test case the word both contains and start with an upper case I's
+   * to correct. This verifies that the converions rules are chained.
+   * <p>
+   * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
+   */
+  @Test
+  public void testProcess_manyUpperI() {
+    testProcess("IoveIy", "lovely", 4, 2, 0, 1, 0, true);
+  }
+
+  /**
+   * For this test case the word starts with an l with the next letter being a
+   * consonant.
+   * <p>
+   * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
+   */
+  @Test
+  public void testProcess_initial_l() {
+    testProcess("lnitially", "Initially", 9, 0, 3, 0, 0, true);
+  }
+
+  /**
+   * For this test case the word starts with an l with the next letter being a
+   * consonant, where word is two characters long.
+   * <p>
+   * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
+   */
+  @Test
+  public void testProcess_initial_l2() {
+    testProcess("lf", "If", 2, 0, 1, 0, 0, true);
+  }
+
+  /**
+   * For this test case there are multiple corrections going both directions.
+   * <p>
+   * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
+   */
+  @Test
+  public void testProcess_bothWays() {
+    testProcess("lt'II", "It'll", 2, 2, 1, 2, 1, true);
+  }
+
+  /**
+   * For this test case the word ends in 'II
+   * <p>
+   * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
+   */
+  @Test
+  public void testProcess_apostropheII() {
+    testProcess("This'II", "This'll", 3, 3, 0, 2, 1, true);
+  }
+
+  /**
+   * For this test case the word starts with l'
+   * <p>
+   * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
+   */
+  @Test
+  public void testProcess_lapostrophe() {
+    testProcess("l'm", "I'm", 2, 0, 1, 0, 1, true);
+  }
+
+  /**
+   * For this test case the word starts with l'
+   * <p>
+   * Test method for {@link org.cafed00d.subtitle.WordProcessor#process()}.
+   */
+  @Test
+  public void testProcess_Iapostrophell() {
+    testProcess("l'II", "I'll", 1, 2, 1, 2, 1, true);
   }
 
   /**
@@ -115,17 +211,17 @@ public class WordProcesorTest {
     int first = PHRASE.indexOf(word);
     WordProcessor wp = new WordProcessor(PHRASE, first);
     int beyond = wp.process();
-    assertEquals("Wrong after index", first + word.length(), beyond);
-    assertEquals("Wrong lower count", lower, wp.getLowerCount());
-    assertEquals("Wrong upper count", upper, wp.getUpperCount());
-    assertEquals("Wrong l count", ell, wp.getlCount());
-    assertEquals("Wrong I count", eye, wp.getICount());
-    assertEquals("Wrong ' count", apos, wp.getApostropheCount());
-    assertEquals("Wrong correction flag", wrong, wp.isCorrectionMade());
+    assertEquals("Wrong after index for " + word, first + word.length(), beyond);
+    assertEquals("Wrong lower count for " + word, lower, wp.getLowerCount());
+    assertEquals("Wrong upper count for " + word, upper, wp.getUpperCount());
+    assertEquals("Wrong l count for " + word, ell, wp.getlCount());
+    assertEquals("Wrong I count for " + word, eye, wp.getICount());
+    assertEquals("Wrong ' count for " + word, apos, wp.getApostropheCount());
+    assertEquals("Wrong correction flag for " + word, wrong, wp.isCorrectionMade());
     if (correct == null) {
       correct = word;
     }
-    assertEquals("Wrong correction", correct, PHRASE.substring(first, beyond));
+    assertEquals("Wrong correction for " + word, correct, PHRASE.substring(first, beyond));
   }
 
 }

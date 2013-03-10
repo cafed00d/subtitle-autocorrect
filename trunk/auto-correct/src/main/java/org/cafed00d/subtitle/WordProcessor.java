@@ -34,6 +34,31 @@ public class WordProcessor {
   private static final Log log = LogFactory.getLog(WordProcessor.class);
 
   /**
+   * Upper case I
+   */
+  private static final char UPPER_I = 'I';
+
+  /**
+   * Lower case l
+   */
+  private static final char LOWER_l = 'l';
+
+  /**
+   * Apostrophe
+   */
+  private static final char APOSTROPHE = '\'';
+
+  /**
+   * The English vowels.
+   */
+  private static final String VOWELS = "aeiouAEIOU";
+
+  /**
+   * The English consonants.
+   */
+  private static final String CONSONANTS = "bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ";
+
+  /**
    * The line being processed.
    */
   private StringBuilder line;
@@ -44,7 +69,9 @@ public class WordProcessor {
   private int first;
 
   /**
-   * Used as the index to scan the word in the line.
+   * Used as the index to scan the word in the line. After
+   * {@link #gatherStatistics()} is done, this points to the character after the
+   * end of the word.
    */
   private int current;
 
@@ -117,6 +144,16 @@ public class WordProcessor {
   }
 
   /**
+   * Gets the length of the word. Valid only after {@link #gatherStatistics()}
+   * has been called.
+   * 
+   * @return The word's length.
+   */
+  public final int getLength() {
+    return current - first;
+  }
+
+  /**
    * Constructor.
    * 
    * @param line
@@ -145,7 +182,10 @@ public class WordProcessor {
      * first check is we have one of those words and ignore it if we do.
      */
     if (!Dictionary.INSTANCE.exceptionCase(originalWord)) {
+      fixApostropheII();
+      fixlApostrophe();
       fixMismatch();
+      fixInitialLetter();
       if (!correctionMade) {
         fixMisspelling();
       }
@@ -172,18 +212,48 @@ public class WordProcessor {
          * character position. Thus we will ignore words such as "I'll" and
          * words that start sentences.
          */
-        if (current != first && ch == 'I') {
+        if (current != first && ch == UPPER_I) {
           ICount++;
         }
       } else if (ch == '\'') {
         apostropheCount++;
       } else {
         lowerCount++;
-        if (ch == 'l') {
+        if (ch == LOWER_l) {
           lCount++;
         }
       }
       current++;
+    }
+  }
+
+  /**
+   * Looks for words that end with 'II and corrects to 'll.
+   */
+  private void fixApostropheII() {
+    if (getLength() > 2) {
+      char apostrophe = line.charAt(current - 3);
+      char firstI = line.charAt(current - 2);
+      char secondI = line.charAt(current - 1);
+      if (apostrophe == APOSTROPHE && firstI == UPPER_I && secondI == UPPER_I) {
+        log.trace("fixing apostrophe II");
+        convertToLowerl(current - 2);
+        convertToLowerl(current - 1);
+      }
+    }
+  }
+
+  /**
+   * Looks for words that begin with l' and corrects to I'.
+   */
+  private void fixlApostrophe() {
+    if (getLength() > 2) {
+      char firstl = line.charAt(first);
+      char apostrophe = line.charAt(first + 1);
+      if (apostrophe == APOSTROPHE && firstl == LOWER_l) {
+        log.trace("fixing l apostrophe");
+        convertToUpperI(first);
+      }
     }
   }
 
@@ -200,12 +270,12 @@ public class WordProcessor {
        * correct it. Note that we ignore the first letter when comparing the
        * size - it might have been upper case.
        */
-      if (ICount > 0 && ICount + lowerCount >= size - 1) {
+      if (ICount > 0 && ICount + lowerCount + apostropheCount >= size - 1) {
         fixUpperI();
       }
 
       /*
-       * If the word is made up of upper case letters and lower case l's (), we
+       * If the word is made up of upper case letters and lower case l's, we
        * will correct it.
        */
       else if (lCount > 0 && lCount + upperCount == size) {
@@ -221,10 +291,8 @@ public class WordProcessor {
   private void fixLowerl() {
     log.trace("fixing lower l");
     for (int i = first; i < current; i++) {
-      if (line.charAt(i) == 'l') {
-        line.setCharAt(i, 'I');
-        log.trace("l->I @ " + i);
-        correctionMade = true;
+      if (line.charAt(i) == LOWER_l) {
+        convertToUpperI(i);
       }
     }
   }
@@ -236,16 +304,119 @@ public class WordProcessor {
   private void fixUpperI() {
     log.trace("fixing upper I");
     /*
-     * Ignore the first letter; the word could be the start if a sentence or a
+     * Ignore the first letter; the word could be the start of a sentence or a
      * contraction for the pronoun I.
      */
     for (int i = first + 1; i < current; i++) {
-      if (line.charAt(i) == 'I') {
-        line.setCharAt(i, 'l');
-        log.trace("I->l @ " + i);
-        correctionMade = true;
+      if (line.charAt(i) == UPPER_I) {
+        convertToLowerl(i);
       }
     }
+  }
+
+  /**
+   * Examines the first letter in words that are all lower case (except the
+   * first letter). Looks for the patterns:
+   * <ul>
+   * <li>I&lt;vowel&gt; - converts to <i>L&lt;vowel&gt;</i></li>
+   * <li>l&lt;consonant&gt; - converts to <i>I&lt;consonant&gt;</i></li>
+   * </ul>
+   * <p>
+   * Note that this method must be called after {@link #fixMismatch()}.
+   */
+  private void fixInitialLetter() {
+
+    /*
+     * Determine if this word is made up of all lower case characters except the
+     * first character which is either an 'I' or an 'l'.
+     */
+    char initialChar = line.charAt(first);
+    if (getLength() > 1 && (initialChar == LOWER_l || initialChar == UPPER_I)) {
+      boolean foundUpper = false;
+      for (int inx = first + 1; inx < current; inx++) {
+        char ch = line.charAt(inx);
+        if (Character.isUpperCase(ch)) {
+          log.trace("found upper " + ch + "@" + inx);
+          foundUpper = true;
+          break;
+        }
+      }
+      if (!foundUpper) {
+
+        /*
+         * The word meets the general criteria, now examine the first two
+         * letters to see if it matches the patterns and if so correct the first
+         * letter.
+         */
+        char secondChar = line.charAt(first + 1);
+        log.trace("initialChar=" + initialChar);
+        log.trace("secondChar=" + secondChar);
+        if (initialChar == LOWER_l && isConsonant(secondChar)) {
+          log.trace("fixing initial l");
+          convertToUpperI(first);
+        } else if (initialChar == UPPER_I && isVowel(secondChar)) {
+          log.trace("fixing initial I");
+          convertToLowerl(first);
+        }
+      }
+    }
+  }
+
+  /**
+   * Determines if the given character is a consonant.
+   * 
+   * @param ch
+   *          The given character.
+   * @return True iff consonant
+   */
+  private boolean isConsonant(char ch) {
+    return CONSONANTS.indexOf(ch) > -1;
+  }
+
+  /**
+   * Determines if the given character is a vowel.
+   * 
+   * @param ch
+   *          The given character.
+   * @return True iff vowel
+   */
+  private boolean isVowel(char ch) {
+    return VOWELS.indexOf(ch) > -1;
+  }
+
+  /**
+   * Replaces a lower case l with an upper case I.
+   * 
+   * @param i
+   *          The index in {@link #line} of the character to replace.
+   */
+  private void convertToUpperI(int i) {
+    convertLetter(i, UPPER_I);
+  }
+
+  /**
+   * Replaces an upper case I with a lower case l.
+   * 
+   * @param i
+   *          The index in {@link #line} of the character to replace.
+   */
+  private void convertToLowerl(int i) {
+    convertLetter(i, LOWER_l);
+  }
+
+  /**
+   * Replaces the character at the indicated position.
+   * 
+   * @param i
+   *          The index in {@link #line} of the character to replace.
+   * @param after
+   *          The new character for that position.
+   */
+  private void convertLetter(int i, char after) {
+    char before = line.charAt(i);
+    line.setCharAt(i, after);
+    log.trace(before + "->" + after + " @ " + i);
+    correctionMade = true;
   }
 
   /**
